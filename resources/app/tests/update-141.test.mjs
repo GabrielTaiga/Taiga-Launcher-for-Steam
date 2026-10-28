@@ -113,11 +113,12 @@ test('Automatic game discovery reads emulator configs, frontends and common fold
  const config={launchers:{psp:{exe:path.join(ppsspp,'PPSSPPWindows64.exe')},retroarch:{exe:path.join(d,'emu','retroarch','retroarch.exe')}},roots:[psp]};
  const emu=emulatorGameFolders({launchers:config.launchers,env}).map(f=>f.source+':'+f.path);
  for(const want of ['PCSX2:'+ps2,'PPSSPP:'+psp,'Dolphin:'+gc,'RetroArch:'+snes])assert.ok(emu.includes(want),want+' em '+emu.join(', '));
- const r=discoverGameFolders(config,{env,platform:'linux',drives:[drive]});
+ // Plataforma real: no Windows Roms/ROMs/roms são a mesma pasta e só a comparação sem diferenciar maiúsculas evita repetição.
+ const r=discoverGameFolders(config,{env,platform:process.platform,drives:[drive]});
  assert.deepEqual(new Set(r.paths),new Set([ps2,psp,gc,snes,path.join(drive,'Roms'),path.join(drive,'Games','Roms'),path.join(drive,'Games','Some PC Game')]));
  assert.equal(r.paths.filter(p=>p===psp).length,1);
  assert.ok(r.folders.find(f=>f.path===psp).sources.includes('saved'));
- assert.deepEqual(collapseFolders([{path:'/a',source:'x'},{path:'/a/b',source:'y'},{path:'/a',source:'z'}]).map(f=>[f.path,f.sources]),[['/a',['x','z']]]);
+ assert.deepEqual(collapseFolders([{path:'/a',source:'x'},{path:'/a/b',source:'y'},{path:'/a',source:'z'}]).map(f=>[f.path,f.sources]),[[path.resolve('/a'),['x','z']]]);
  assert.deepEqual(iniSections('[A]\nk = v\n; c\n').a,[['k','v']]);
 });
 

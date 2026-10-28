@@ -64,9 +64,9 @@ test('1.9.0: Xbox / Microsoft Store, login token, achievements by package name, 
 
 test('1.9.0: yuzu game folders, guess screen, installed dialog; texts in 5 languages', async () => {
   const {emulatorGameFolders} = await import('../lib/discover.mjs');
-  const files = {'/a/yuzu/config/qt-config.ini': '[UI]\nPaths\\gamedirs\\1\\path=SDMC\nPaths\\gamedirs\\4\\path=/jogos/switch\n'};
+  const files = {[path.join('/a', 'yuzu', 'config', 'qt-config.ini')]: '[UI]\nPaths\\gamedirs\\1\\path=SDMC\nPaths\\gamedirs\\4\\path=/jogos/switch\n'};
   const io = {exists: f => f in files, read: f => files[f] || '', list: () => []};
-  assert.deepEqual(emulatorGameFolders({env: {APPDATA: '/a'}, io}).filter(x => x.source === 'yuzu').map(x => x.path), ['/jogos/switch']);
+  assert.deepEqual(emulatorGameFolders({env: {APPDATA: '/a'}, io}).filter(x => x.source === 'yuzu').map(x => x.path), [path.normalize('/jogos/switch')]);
   assert.match(app, /api\('guess-game',\{path:g\.path\}\)/);
   assert.match(app, /async function installedDialog\(after\)/);
   assert.match(app, /data-act="installed"|mini\('installed'/);

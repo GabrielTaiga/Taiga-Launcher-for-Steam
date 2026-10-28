@@ -1,10 +1,10 @@
 // Página do jogo dentro da Steam (pacote NativeGameLink adaptado): todo texto visível precisa sair no idioma do
 // TaigaSteam. O teste roda o código compilado de verdade (steam/ngl.bundle.js) num ambiente simulado e confere
 // todas as chaves usadas no código-fonte em português, inglês, espanhol, francês e alemão.
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';import {fileURLToPath} from 'node:url';
 
 const BUNDLE=new URL('../steam/ngl.bundle.js',import.meta.url);
-const SOURCE=new URL('../../../third_party/nativegamelink/frontend/',import.meta.url);
+const SOURCE=new URL('../../../third_party/nativegamelink/frontend/',import.meta.url),SOURCE_DIR=fileURLToPath(SOURCE);
 const LANGS={'pt-BR':'brazilian',en:'english',es:'latam',fr:'french',de:'german'};
 
 function react(){const n=()=>null,r={createElement:n,Fragment:'f',StrictMode:'s',Suspense:'su',Children:{map:()=>[],forEach(){},toArray:()=>[],count:()=>0,only:x=>x},cloneElement:x=>x,isValidElement:()=>false,createRef:()=>({current:null}),createContext:v=>({Provider:'p',Consumer:'c',_currentValue:v}),useContext:c=>c?._currentValue,useState:v=>[typeof v==='function'?v():v,n],useReducer:(f,v)=>[v,n],useEffect:n,useLayoutEffect:n,useInsertionEffect:n,useMemo:f=>f(),useRef:v=>({current:v}),useCallback:f=>f,useId:()=>'id',useTransition:()=>[false,f=>f()],useDeferredValue:v=>v,useImperativeHandle:n,useDebugValue:n,useSyncExternalStore:(s,g)=>g(),startTransition:f=>f(),memo:x=>x,forwardRef:x=>x,lazy:x=>x,Component:class{},PureComponent:class{}};r.default=r;return r;}
@@ -21,13 +21,13 @@ function loadBundle(){
 }
 // Todas as chamadas gdlText(chave, padrão) e loc(token, padrão) do código-fonte.
 function sourceCalls(){
- const files=[];const walk=d=>{for(const f of fs.readdirSync(d)){const p=path.join(d,f);if(fs.statSync(p).isDirectory())walk(p);else if(/\.tsx?$/.test(f))files.push(p);}};walk(SOURCE.pathname);
+ const files=[];const walk=d=>{for(const f of fs.readdirSync(d)){const p=path.join(d,f);if(fs.statSync(p).isDirectory())walk(p);else if(/\.tsx?$/.test(f))files.push(p);}};walk(SOURCE_DIR);
  const lit=String.raw`(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|\x60((?:[^\x60\\]|\\.)*)\x60)`;
  const re=new RegExp(String.raw`\b(gdlText|loc)\(\s*`+lit+String.raw`(?:\s*,\s*`+lit+')?','g');
  const gdl={},loc={};
  // Tokens da Steam passados de forma indireta (listas ['Token', 'Texto'] ou funções auxiliares).
  const pair=/["'\x60]((?:AppDetails|Achievements|AppActivity|AppBox|Played|EventDisplay|GameAction|Button|AppControllerConfiguration|ScreenshotManager)_\w+)["'\x60]\s*,\s*(["'\x60])((?:(?!\2)[^\\]|\\.)+)\2/g;
- for(const f of files){if(/(^|\/)(localization|token-fallbacks|taiga-[\w-]+|token-specs|translations-\w+|custom-translations)\.ts$/.test(f))continue;const s=fs.readFileSync(f,'utf8'),rel=path.relative(SOURCE.pathname,f);for(const m of s.matchAll(re)){const key=m[2]??m[3]??m[4],fallback=m[5]??m[6]??m[7];if(key.includes('${'))continue;((m[1]==='gdlText'?gdl:loc)[key]||=[]).push({fallback,file:rel});}
+ for(const f of files){if(/(^|[\\/])(localization|token-fallbacks|taiga-[\w-]+|token-specs|translations-\w+|custom-translations)\.ts$/.test(f))continue;const s=fs.readFileSync(f,'utf8'),rel=path.relative(SOURCE_DIR,f);for(const m of s.matchAll(re)){const key=m[2]??m[3]??m[4],fallback=m[5]??m[6]??m[7];if(key.includes('${'))continue;((m[1]==='gdlText'?gdl:loc)[key]||=[]).push({fallback,file:rel});}
   for(const m of s.matchAll(pair))(loc[m[1]]||=[]).push({fallback:m[3],file:rel});}
  return {gdl,loc,files};
 }
@@ -36,7 +36,7 @@ const valuesFor=(...texts)=>Object.fromEntries(texts.flatMap(placeholders).map(n
 const fill=(text,values)=>String(text).replace(/\{(\w+)\}/g,(w,n)=>values[n]??w).replace(/NativeGameLink(?: for Steam)?|Native ?Game ?Link/g,'Taiga Launcher');
 const looksSpanish=text=>/ción|ñ|Compatibilidad|logros?\b|juego|jugador|tienda|Ver /i.test(String(text||''));
 // Tokens usados só para reconhecer rótulos da própria Steam (não aparecem como texto do TaigaSteam).
-const DETECTION_FILES=/(^|\/)(properties|tabs|native-add-guard|sidebar-order|NativeStuffComponents)\.ts$/;
+const DETECTION_FILES=/(^|[\\/])(properties|tabs|native-add-guard|sidebar-order|NativeStuffComponents)\.ts$/;
 const NEUTRAL_TOKENS=new Set(['AppProperties_SteamCloudSection']);
 
 test('Steam page (NGL): every text key used in the code has a translation in all 5 languages',t=>{
@@ -99,6 +99,6 @@ test('Steam page (NGL): no "Game Launch", emulator games are not "released on St
  const news=fs.readFileSync(new URL('features/library/news.ts',SOURCE),'utf8'),app=fs.readFileSync(new URL('runtime/app.tsx',SOURCE),'utf8'),specs=fs.readFileSync(new URL('steam/token-specs.ts',SOURCE),'utf8');
  assert.doesNotMatch(news,/Game Launch|EventDisplay_EventType_10/);assert.doesNotMatch(specs,/EventDisplay_EventType_10/);
  assert.match(news,/isTaigaVirtualAppId\(steamAppId\) \? gdlText\('feed_release_title_taiga'/);
- assert.match(app,/__TAIGA_NGL_HOST__[^\n]*\) return;\n\t\ttryInjectPropertiesField/);
+ assert.match(app,/__TAIGA_NGL_HOST__[^\n]*\) return;\r?\n\t\ttryInjectPropertiesField/);
  const bundle=fs.readFileSync(BUNDLE,'utf8');assert.ok(!bundle.includes('"Game Launch"')&&!bundle.includes("'Game Launch'"),'pacote recompilado');
 });

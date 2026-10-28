@@ -104,3 +104,17 @@ test('RetroAchievements: jogo de emulador sem hash é achado pelo nome, inclusiv
  assert.equal(original.raId, 1234);
  fs.rmSync(dir, {recursive: true, force: true});
 });
+
+test('RetroAchievements: lista do console indisponível tenta de novo em 10 min; lista carregada sem o jogo espera 6 h', async () => {
+ let online = false, calls = 0;
+ const retro = {gamesList: async () => { calls++; if (!online) throw Error('offline'); return {34904: '~Hack~ Newer Super Mario Bros. Wii'}; }};
+ const m = new AchievementProviderManager({config: () => ({}), dir: os.tmpdir(), providers: {retro}, account: () => null});
+ const game = {id: 'n', title: 'Newer Super Mario Bros. Wii', profile: 'dolphin', platformKey: 'wii', platformName: 'Wii'};
+ assert.equal(await m.resolveRaId(game), null); assert.equal(game.raLookupFailed, true);
+ assert.equal(await m.resolveRaId(game), null); assert.equal(calls, 1, 'logo depois da falha não pede de novo');
+ game.raLookupAt -= 11 * 60000; online = true;
+ assert.equal(await m.resolveRaId(game), 34904); assert.equal(game.raLookupFailed, undefined);
+ const other = {id: 'x', title: 'Jogo Sem Conquistas', profile: 'dolphin', platformKey: 'wii', platformName: 'Wii'};
+ assert.equal(await m.resolveRaId(other), null); other.raLookupAt -= 11 * 60000; calls = 0;
+ assert.equal(await m.resolveRaId(other), null); assert.equal(calls, 0, 'lista carregada e jogo ausente: espera as 6 h');
+});

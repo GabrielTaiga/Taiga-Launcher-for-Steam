@@ -68,7 +68,7 @@ test('Xbox package family name, Riot and Heroic installs, installed games need e
 
 test('The PC sweep finds a PSP ISO anywhere and ignores an ISO that is not a game',t=>{
  const d=tmp(t);write(path.join(d,'Downloads','qualquer','Patapon.iso'),iso());write(path.join(d,'Downloads','windows11.iso'),Buffer.alloc(64*1024));write(path.join(d,'AppData','x.iso'),iso());
- const files=sweepGames([d]);assert.ok(files.some(f=>f.endsWith('Patapon.iso')));assert.ok(!files.some(f=>f.includes('AppData')));
+ const files=sweepGames([d]);assert.ok(files.some(f=>f.endsWith('Patapon.iso')));assert.ok(!files.some(f=>path.relative(d,f).split(path.sep).includes('AppData')));
 });
 
 test('Emulator download picks the official Windows zip of the latest release',async()=>{

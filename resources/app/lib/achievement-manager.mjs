@@ -75,7 +75,8 @@ export class AchievementProviderManager{
  // consoles mais comuns). Liga só quando há exatamente um jogo com esse nome. Fica salvo no jogo (raId).
  async resolveRaId(game){
   if(game.raId)return game.raId;const retro=this.providers?.retro;if(!retro?.gamesList)return null;
-  if(game.raLookupAt&&Date.now()-game.raLookupAt<6*3600000)return null;game.raLookupAt=Date.now();
+  // Lista indisponível na última tentativa (sem internet, RA fora do ar): tenta de novo em 10 min, não em 6 h.
+  if(game.raLookupAt&&Date.now()-game.raLookupAt<(game.raLookupFailed?600000:6*3600000))return null;game.raLookupAt=Date.now();
   const port=(()=>{try{return portOf(game);}catch{return null;}})(),prof=portProfile(game);
   const norm=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[™®©]/g,'').replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim();
   const expand=list=>[...new Set(list.filter(Boolean).flatMap(t=>[t,editionBase(t)]).map(norm).filter(t=>t.length>1))];
@@ -84,8 +85,9 @@ export class AchievementProviderManager{
   if(!titles.length)return null;
   const hint=[prof?platformByKey(prof.platform):null,platformByKey(game.platformKey),platformByName(game.platformName),port?.platform?platformByName(port.platform)||platformByKey(port.platform):null].find(p=>p?.ra);
   const keys=hint?[hint.key]:['ps2','psp','ps1','gc','wii','n64','snes','nes','gba','nds','genesis','saturn','dreamcast','gb','gbc','3ds'];
-  const lists=[];
-  for(const key of keys){const p=platformByKey(key);if(!p?.ra)continue;let list={};try{list=await retro.gamesList(p.ra);}catch(e){this.log?.('RetroAchievements (lista '+p.short+'): '+e.message);continue;}lists.push([p,list]);}
+  const lists=[];let failed=false;
+  for(const key of keys){const p=platformByKey(key);if(!p?.ra)continue;let list={};try{list=await retro.gamesList(p.ra);}catch(e){failed=true;this.log?.('RetroAchievements (lista '+p.short+'): '+e.message);continue;}lists.push([p,list]);}
+  if(failed)game.raLookupFailed=true;else delete game.raLookupFailed;
   const find=names=>{const hits=new Map();for(const [p,list] of lists){
    // Hacks e homebrew ("~Hack~ Newer Super Mario Bros. Wii") valem pelo nome sem a marca; subconjuntos não.
    for(const [id,name] of Object.entries(list)){if(/\[subset/i.test(name))continue;const tagged=/^~[^~]+~/.test(name),clean=String(name).replace(/^(?:~[^~]+~\s*)+/,'');if(/~/.test(clean))continue;const alts=clean.split('|').map(norm);if(alts.some(a=>names.includes(a)))hits.set(Number(id),{id:Number(id),name,platform:p,tagged});}

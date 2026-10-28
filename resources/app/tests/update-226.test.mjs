@@ -2,7 +2,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import net from 'node:net';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
 import {DiscordPresence,buildActivity,encodeFrame,decodeFrames} from '../lib/discord-rpc.mjs';
 test('Discord presence: handshake, game shown like a Steam game, cleared when the game closes', async t => {
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'taiga-226-'));const sock=path.join(dir,'discord-ipc-0');const seen=[];
+ // No Windows o Discord escuta num named pipe (\\?\pipe\discord-ipc-N), não num arquivo.
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'taiga-226-'));const sock=process.platform==='win32'?`\\\\?\\pipe\\${path.basename(dir)}-discord-ipc-0`:path.join(dir,'discord-ipc-0');const seen=[];
  const server=net.createServer(c=>{let buf=Buffer.alloc(0);c.on('data',d=>{buf=Buffer.concat([buf,d]);const {frames,rest}=decodeFrames(buf);buf=rest;for(const f of frames){seen.push(f);if(f.op===0)c.write(encodeFrame(1,{cmd:'DISPATCH',evt:'READY',data:{v:1}}));}});});
  await new Promise(r=>server.listen(sock,r));t.after(()=>{server.close();fs.rmSync(dir,{recursive:true,force:true});});
  const p=new DiscordPresence({clientId:'123456789012345678',paths:[path.join(dir,'nao-existe'),sock]});
