@@ -1,0 +1,28 @@
+{
+  "name": "taigasteam",
+  "version": "3.2.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --env-file=tests/test.env --test tests/*.test.mjs",
+    "dev:service": "node server.mjs",
+    "build:locales": "node tools/build-locales.mjs"
+  },
+  "main": "desktop/main.cjs",
+  "productName": "TaigaSteam",
+  "description": "Taiga Launcher, jogos de emulador, de PC e ports de console na Biblioteca Steam",
+  "devDependencies": {
+    "electron": "44.7.1"
+  },
+  "taigaUpdates": "GabrielTaiga/Taiga-Launcher-for-Steam",
+  "taigaUpdatesFallback": ["GabrielTaiga/taiga-launcher"],
+  "taigaDiscord": "",
+  "taigaServer": "https://taiga-launcher.taigadominio.workers.dev",
+  "author": "Taiga (GabrielTaiga)",
+  "repository": "https://github.com/GabrielTaiga/taiga-launcher"
+}
